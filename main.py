@@ -14,7 +14,48 @@ def search_wifi():
     information.setText('')
     passowrdStatue.setText('')
 
-    
+    # 2. بناء دالة الخلفية المسؤولة عن التحديث المستمر كل ثانية
+    def wifi_scanner_thread():
+        wifi = pywifi.PyWiFi()
+        iface = wifi.interfaces()[0]
+        
+        print("[*] Continuous Wi-Fi scanning started...")
+        
+        # حلقة تكرار مستمرة لتحديث الشبكات (تحديث حي)
+        while True:
+            iface.scan() # أمر كرت الشبكة ببدء البحث
+            time.sleep(1) # الانتظار ثانية واحدة لتحديث البيانات
+            
+            scan_results = iface.scan_results()
+            
+            # مصفوفة لتخزين الأسماء الفريدة لمنع تكرار نفس اسم الشبكة في القائمة
+            discovered_ssids = []
+            
+            for network in scan_results:
+                # تنظيف الاسم من المسافات المخفية
+                ssid = network.ssid.strip()
+                
+                # تخطي الشبكات المخفية (بدون اسم) والشبكات المضافة مسبقاً في هذه الدورة
+                if ssid and ssid not in discovered_ssids:
+                    discovered_ssids.append(ssid)
+            
+            # 3. تحديث الـ listView بأسماء الشبكات المكتشفة
+            # ملاحظة: إذا كانت مكتبتك المغلّفة تدعم إضافة نصوص أو مصفوفة للـ listView
+            # سنفترض أن الدالة اسمها .addItem() أو .add() أو .setItems() حسب برمجتك لها
+            
+            # هنا نقوم بمسح القائمة القديمة وإضافة القائمة المحدثة
+            listView.Clear() 
+            for name in discovered_ssids:
+                # استبدل .addItem(name) بالدالة الصحيحة في مكتبتك لإضافة عنصر للـ ListView
+                listView.add_item(name) 
+                
+            listView.scrollToBottom() # النزول التلقائي لأسفل السكرول بار الاحترافي
+            
+            # انتظام التحديث بين كل ثانية والأخرى
+            time.sleep(1)
+
+    # 4. تشغيل الدالة في خيط مستقل (Thread) فور النقر على الزر لمنع تجمد الواجهة
+    threading.Thread(target=wifi_scanner_thread, daemon=True).start()
 
 
 def show_wifi_info():
