@@ -1,0 +1,79 @@
+# CrackFi 🔐
+**Version:** 1.0.0v
+
+---
+
+## 📌 Overview
+**CrackFi** is a Python-based desktop application built using the `pywifi` library that provides a clean and modern graphical user interface (GUI) for Wi-Fi network analysis. 
+
+It allows users to dynamically scan nearby networks, view comprehensive security details, and evaluate password strength using a wordlist file. The application features multi-threading to ensure the interface remains completely responsive during active operations, alongside real-time progress tracking and precise estimated time remaining.
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔍 **Dynamic Wi-Fi Scanning** | Scans and updates available nearby networks automatically without freezing the user interface. |
+| 📊 **Comprehensive Network Details** | Retrieves essential intelligence including SSID, MAC Address (BSSID), exact encryption type, and signal strength (dBm). |
+| ⏳ **Advanced Time Estimation** | Computes and displays the remaining time (in seconds, minutes, or hours) dynamically based on actual trial speeds. |
+| 📈 **Smooth Continuous Progress Bar** | Features a modern, ultra-thin progress bar design inspired by video players—completely smooth with no block divisions or internal text overlaps. |
+| 🏁 **Intelligent State Freeze** | The progress bar stops and freezes exactly at the correct password location upon a successful match rather than forcing a jump to 100%. |
+| 💻 **Responsive Architecture** | Built with custom components (`Entry`, `Button`, `Label`, `ProgressBar`, `ListView`) leveraging `WorkerThread` processing to keep the application stable and fluid. |
+
+---
+
+## 🛠️ Requirements & Installation
+
+### 1. Prerequisites
+* **Python 3.10** or higher.
+* A compatible wireless network interface card (Wi-Fi Adapter).
+
+### 2. Dependencies
+Install the required standard libraries via your terminal:
+```bash
+pip install PyQt6 pywifi
+```
+
+---
+
+## 🚀 Detailed Usage Guide
+To perform an authorized security evaluation on your wireless network, follow these steps sequentially:
+
+Scan the Environment: Click the Scan button to discover surrounding networks. Each network will be displayed with a corresponding ID.
+
+Select Target Network: Type the number (ID) or the exact name of the desired network into the upper input entry field.
+
+Analyze Security Info: Click Get Information to fetch and verify the security configuration and signal status of the chosen network.
+
+Load Password File: Click Browse and select your customized password list text file (.txt).
+
+Execute Evaluation: Click Crack Wi-Fi to begin the automated password test. You can monitor the tried combinations in the Terminal Output box while checking the overall progress percentage and countdown timer on the main status label.
+
+
+---
+
+⚠️ Legal & Security Disclaimer
+IMPORTANT NOTICE: > This software is strictly developed for educational, research, and authorized security testing purposes only (Ethical Hacking and authorized network auditing).
+
+Running this tool against any wireless infrastructure without explicit, written permission from the rightful owner is completely illegal.
+
+Unauthorized use of this software may violate local cybercrime laws and regulations, potentially exposing the user to severe legal penalties.
+
+The developer assumes absolutely no liability and is not responsible for any misuse, damage, or legal consequences caused by this application.
+
+
+📂 Project Structure
+CrackFi/
+│── main.py           # Core application execution code
+│── hacklore.py       # Custom UI framework library 
+│── passwords.txt     # Sample evaluation wordlist file
+└── README.md         # Full project documentation
+
+📸 Suggested Gallery (Screenshots)
+
+1 Main Interface: Showing the dynamic wireless network lookup list.
+
+2 Network Intelligence View: Displaying analytical details (BSSID, cipher type, and dBm strength).
+
+3 Active Processing Status: Visualizing the modern thin continuous progress bar and the countdown timer.
