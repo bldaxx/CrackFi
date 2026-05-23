@@ -11,15 +11,12 @@ It allows users to dynamically scan nearby networks, view comprehensive security
 ---
 
 ## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| 🔍 **Dynamic Wi-Fi Scanning** | Scans and updates available nearby networks automatically without freezing the user interface. |
-| 📊 **Comprehensive Network Details** | Retrieves essential intelligence including SSID, MAC Address (BSSID), exact encryption type, and signal strength (dBm). |
-| ⏳ **Advanced Time Estimation** | Computes and displays the remaining time (in seconds, minutes, or hours) dynamically based on actual trial speeds. |
-| 📈 **Smooth Continuous Progress Bar** | Features a modern, ultra-thin progress bar design inspired by video players—completely smooth with no block divisions or internal text overlaps. |
-| 🏁 **Intelligent State Freeze** | The progress bar stops and freezes exactly at the correct password location upon a successful match rather than forcing a jump to 100%. |
-| 💻 **Responsive Architecture** | Built with custom components (`Entry`, `Button`, `Label`, `ProgressBar`, `ListView`) leveraging `WorkerThread` processing to keep the application stable and fluid. |
+* **🔍 Dynamic Wi-Fi Scanning:** Scans and updates available nearby networks automatically without freezing the user interface.
+* **📊 Comprehensive Network Details:** Retrieves essential intelligence including SSID, MAC Address (BSSID), exact encryption type, and signal strength (dBm).
+* **⏳ Advanced Time Estimation:** Computes and displays the remaining time (in seconds, minutes, or hours) dynamically based on actual trial speeds.
+* **📈 Smooth Continuous Progress Bar:** Features a modern, ultra-thin progress bar design inspired by video players—completely smooth with no block divisions or internal text overlaps.
+* **🏁 Intelligent State Freeze:** The progress bar stops and freezes exactly at the correct password location upon a successful match rather than forcing a jump to 100%.
+* **💻 Responsive Architecture:** Built with custom components (`Entry`, `Button`, `Label`, `ProgressBar`, `ListView`) leveraging `WorkerThread` processing to keep the application stable and fluid.
 
 ---
 
