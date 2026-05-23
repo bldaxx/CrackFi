@@ -176,8 +176,7 @@ def crack_wifi():
     current_running_scan = False
     
     infoLabel.setText('Cracking... 0.0%')
-    information.setText('')
-    passwordStatue.setText('')
+    get_wifi_information()
     listView.Clear()
     myProgress.setValue(0)
 
@@ -313,15 +312,20 @@ wifinameFrame.Style(first_style='''''', second_style='''''')
 page.Add(wifinameFrame)
 
 wifiName = Entry(placeholder_text='Choose The Network Number')
+wifiName.Style(first_style='''color: darkslategrey; border: 2px solid gray; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-radius: 5px; padding: 5px;''', second_style=''':focus{ border: 2px solid darkslategrey; }''')
+wifiName.minHeight(min_height=30)
 wifinameFrame.addTo(wifiName)
 
 scanButton = Button(text='Scan', command=lambda: scan_wifi())
+scanButton.Style(first_style='''color: darkslategrey; border: 2px solid darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-radius: 5px; padding: 5px;''', second_style=''':hover{ background-color: darkslategrey; color: lightgray; }''')
 wifinameFrame.addTo(scanButton)
 
 getButton = Button(text='Get Information', command=lambda: get_wifi_information())
+getButton.Style(first_style='''color: darkslategrey; border: 2px solid darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-radius: 5px; padding: 5px;''', second_style=''':hover{ background-color: darkslategrey; color: lightgray; }''')
 wifinameFrame.addTo(getButton)
 
 crackButton = Button(text='Crack Wi-Fi', command=lambda: crack_wifi())
+crackButton.Style(first_style='''color: darkslategrey; border: 2px solid darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-radius: 5px; padding: 5px;''', second_style=''':hover{ background-color: darkslategrey; color: lightgray; }''')
 wifinameFrame.addTo(crackButton)
 
 passwordFrame = Frame()
@@ -331,10 +335,13 @@ passwordFrame.Style(first_style='''''', second_style='''''')
 page.Add(passwordFrame)
 
 passwordPath = Entry(placeholder_text='Select Password File Path')
+passwordPath.Style(first_style='''color: darkslategrey; border: 2px solid gray; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-radius: 5px; padding: 5px;''', second_style=''':focus{ border: 2px solid darkslategrey; }''')
+passwordPath.minHeight(min_height=30)
 passwordPath.setReadOnly(read_only=True)
 passwordFrame.addTo(passwordPath)
 
 browseButton = Button(text='Browse', command=lambda: browse())
+browseButton.Style(first_style='''color: darkslategrey; border: 2px solid darkslategrey; font-family: Lucida Console; font-weight: bold; font-size: 14px; border-radius: 5px; padding: 5px;''', second_style=''':hover{ background-color: darkslategrey; color: lightgray; }''')
 passwordFrame.addTo(browseButton)
 
 boxFrame = Frame()
