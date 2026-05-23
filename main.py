@@ -6,7 +6,6 @@ import time
 import pywifi
 from pywifi import *
 from hacklore import *
-from PyQt6.QtWidgets import QApplication
 
 #------------------------------------------------------------------------------------------------------------
 
